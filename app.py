@@ -72,23 +72,23 @@ def update_graph(option_slctd):
         template='plotly_dark'
     )
 
-    # Plotly Graph Objects (GO)
-    # fig = go.Figure(
-    #     data=[go.Choropleth(
-    #         locationmode='USA-states',
-    #         locations=dff['state_code'],
-    #         z=dff["Pct of Colonies Impacted"].astype(float),
-    #         colorscale='Reds',
-    #     )]
-    # )
-    #
-    # fig.update_layout(
-    #     title_text="Bees Affected by Mites in the USA",
-    #     title_xanchor="center",
-    #     title_font=dict(size=24),
-    #     title_x=0.5,
-    #     geo=dict(scope='usa'),
-    # )
+    Plotly Graph Objects (GO)
+    fig = go.Figure(
+        data=[go.Choropleth(
+            locationmode='USA-states',
+            locations=dff['state_code'],
+            z=dff["Pct of Colonies Impacted"].astype(float),
+            colorscale='Reds',
+        )]
+    )
+    
+    fig.update_layout(
+        title_text="Bees Affected by Mites in the USA",
+        title_xanchor="center",
+        title_font=dict(size=24),
+        title_x=0.5,
+        geo=dict(scope='usa'),
+    )
 
     return container, fig
 
