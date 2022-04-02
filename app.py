@@ -72,7 +72,7 @@ def update_graph(option_slctd):
         template='plotly_dark'
     )
 
-    Plotly Graph Objects (GO)
+    # Plotly Graph Objects (GO)
     fig = go.Figure(
         data=[go.Choropleth(
             locationmode='USA-states',
