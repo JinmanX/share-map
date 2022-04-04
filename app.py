@@ -3,14 +3,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import dcc, html
-import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
-# import altair as alt
-# from vega_datasets import data
+import altair as alt
+from vega_datasets import data
 
 
 # Initializing dash app
-app = dash.Dash(__name__, external_stylesheets = ['https://stackpath.bootstrapcdn.com/bootswatch/4.5.2/lux/bootstrap.min.css'])
+app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'SHARE data visualisation'
 
 # Adding Heroku server object
@@ -18,7 +18,7 @@ server = app.server
 
 # Preparing data
 state_map = alt.topo_feature(data.us_10m.url, 'states')
-data = pd.read_csv('data/processed/processed_survey.csv')
+data = pd.read_csv('https://raw.githubusercontent.com/UBC-MDS/DSCI532-Group16/main/data/processed/processed_survey.csv')
 
 #States dataframe for filter
 df_states = data[['state_fullname', 'state']].drop_duplicates(subset=['state_fullname','state']).dropna()
@@ -37,29 +37,33 @@ SIDEBAR_STYLE = {
 
 sidebar = html.Div(
     [
-        html.H3("Filters", className="display-5"),
+        html.H3("Properties", className="display-5"),
         html.Hr(),
-        html.P(
-            ""
-        ),
+        # html.P(
+        #     ""
+        # ),
+
         html.Br(),
-        # State Filter
-        
-        html.H4(html.Label(['State Selection'])), 
+        # Variable selector
+        html.H4(html.Label(['Variable Selection'])), 
         dcc.Dropdown(
-            id = 'state_selector',
-            options=[{'label': state_full, 'value': state_abbrev} for state_full, state_abbrev in list(zip(df_states.state_fullname, df_states.state))],
-            value='AL', 
+            id = 'variable_selector',
+            options=[{"label": "gdp", "value": "gdp"},
+                     {"label": "computer use", "value": "computer_use"},
+                     {"label": "computer skills", "value": "computer_skills"},
+                     {"label": "mental fatigue", "value": "mental_fatigue"},
+                     {"label": "physical fatigue", "value": "physical_fatigue"},
+                     {"label": "energy", "value": "energy"}]
+            value='computer us', 
             multi=False,
-            style={'height': '30px', 'width': '250px'}
+            # style={'height': '30px', 'width': '250px'}
             ),                    
                 
-        
         html.Br(),
         # Age Slider
         html.H4(html.Label(['Age'])),
-        dcc.RangeSlider(id = 'age_slider', min = 18, max = 75, value = [18,75], 
-            marks = {18:'18', 30:'30', 40:'40', 50:'50', 60:'60', 70:'70', 75:'75'}),
+        dcc.RangeSlider(id = 'age_slider', min = 1939, max = 1978, value = [1939,1978], 
+            marks = {1939:'1939', 1948:'1948', 1963:'1963', 1978:'1978'}),
         
         html.Br(),
         # Gender Filter Checklist
@@ -68,23 +72,30 @@ sidebar = html.Div(
             id = 'gender_checklist',
             options = [
                 {'label' : 'Male', 'value' : 'Male'},
-                {'label' : 'Female  ', 'value' : 'Female'},
-                {'label' : 'Other  ', 'value' : 'Other'}],
-            value = ['Male', 'Female', 'Other'],
+                {'label' : 'Female  ', 'value' : 'Female'}],
+            value = ['Male', 'Female'],
             labelStyle = dict(display='block')
         ),
         html.Br(),
-        # Self-Employed Filter Checklist
-        html.H4(html.Label(['Self-Employed'])),
-        dcc.Checklist(
-            id = 'self_emp_checklist',
+        # Country Radio buttons
+        html.H4(html.Label(['Country'])),
+        dcc.RadioItems(
+            id = 'country_radioitems',
             options = [
-                {'label' : 'Yes  ', 'value' : 'Yes'},
-                {'label' : 'No  ', 'value' : 'No'},
-                {'label' : 'N/A  ', 'value' : 'N/A'}],
-            value = ['Yes', 'No', 'N/A'],            
+                {'label' : 'Austria', 'value' : 'Austria'},
+                {'label' : 'Germany', 'value' : 'Germany'},
+                {'label' : 'Sweden', 'value' : 'Sweden'},
+                {'label' : 'Spain', 'value' : 'Spain'},
+                {'label' : 'Italy', 'value' : 'Italy'},
+                {'label' : 'France', 'value' : 'France'},
+                {'label' : 'Denmark', 'value' : 'Denmark'},
+                {'label' : 'Greece', 'value' : 'Greece'},
+                {'label' : 'Switzerland', 'value' : 'Switzerland'},
+                {'label' : 'Belgium', 'value' : 'Belgium'},
+                {'label' : 'Czech Republic', 'value' : 'Czech Republic'},
+                {'label' : 'Poland', 'value' : 'Poland'}],
+            value = 'Denmark',            
             labelStyle = dict(display='block')
-            
         )
 
     ],
@@ -104,11 +115,9 @@ content = html.Div([
                 # Tab 1
                 dbc.Tab([
 
-
-                    # Map plot
                     dbc.Row(
                             dbc.Col(
-                                
+                                # Map plot
                                 html.Iframe(
                                     id = 'map_frame', 
                                     style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
@@ -116,7 +125,6 @@ content = html.Div([
                                 width=True, 
                                 ),style={'textAlign': 'center'}
                     ),
-
 
                     dbc.Row([
                         dbc.Col(
@@ -126,28 +134,25 @@ content = html.Div([
                                 style = {'border-width' : '0', 'width' : '100%', 'height': '100%'})
                         ), 
                     ]),
+
                     dbc.Row([
                         dbc.Col(
                             #Discuss mental issues with supervisor boxplot
                             html.Iframe(
                                 id = 'iframe_discuss_w_supervisor', 
                                 style = {'border-width' : '0', 'width' : '100%', 'height': '100%'}),            
-                            
                         )
-                        
                     ]),   
                       
-
-                    
-
                     ],
-                    label = 'HR Prototype v0.01'),
+                    label = 'Map visualisation'),
 
                 
-                #Tab 2
-                #dbc.Tab('Other text', label = 'Tab Two')
+                Tab 2
+                dbc.Tab('Other text', label = 'Network Vosualisation')
             ])], 
-            id="page-content", style=CONTENT_STYLE)
+            id="page-content", 
+            style=CONTENT_STYLE)
 
 
 app.layout = html.Div([
