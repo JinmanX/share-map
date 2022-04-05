@@ -114,17 +114,26 @@ content = html.Div([
                 # Tab 1
                 dbc.Tab([
 
+                    # dbc.Row(
+                    #         dbc.Col(
+                    #             # Map plot
+                    #             html.Iframe(
+                    #                 id = 'map_frame', 
+                    #                 style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
+                    #             style={'margin-bottom':'50px', 'textAlign':'center'} ,                                    
+                    #             width=True, 
+                    #             ),style={'textAlign': 'center'}
+                    # ),
                     dbc.Row(
                             dbc.Col(
                                 # Map plot
-                                html.Iframe(
+                                dcc.Graph(
                                     id = 'map_frame', 
                                     style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
                                 style={'margin-bottom':'50px', 'textAlign':'center'} ,                                    
                                 width=True, 
                                 ),style={'textAlign': 'center'}
                     ),
-
                     # dbc.Row([
                     #     dbc.Col(
                     #         #Options Barplot
@@ -203,8 +212,38 @@ app.layout = html.Div([
 map_click = alt.selection_multi()
 
 
+# @app.callback(
+#     Output('map_frame', 'srcDoc'),
+#     Input('age_slider', 'value'),
+#     Input('gender_checklist', 'value'),
+#     Input('variable_selector', 'value'))
+# def plot_map(age_chosen, gender_chosen, var_chosen):
+
+#     filtered_data = data[(data['yrbirth'] >= age_chosen[0]) 
+#     & (data['yrbirth'] <= age_chosen[1])
+#     & (data['gender'].isin(gender_chosen))]
+
+#     ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
+#     ct = ct.reset_index()
+#     ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
+#     map = (alt.Chart(countries, 
+#         title = 'Map visualisation').mark_geoshape().transform_lookup(
+#         lookup='id',
+#         from_=alt.LookupData(ct, 'id', ['Yes']))
+#         .encode(
+#         color='Yes:Q',
+#         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
+#         tooltip=['country:N', 'Yes:Q'])
+#         .add_selection(map_click)
+#         .project(
+#             type= 'mercator',
+#         )).properties(
+#             width=400, height=300
+#         )
+#     return map.to_html()
+
 @app.callback(
-    Output('map_frame', 'srcDoc'),
+    Output('map_frame', 'figure'),
     Input('age_slider', 'value'),
     Input('gender_checklist', 'value'),
     Input('variable_selector', 'value'))
@@ -216,23 +255,24 @@ def plot_map(age_chosen, gender_chosen, var_chosen):
 
     ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
     ct = ct.reset_index()
-    ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
-    map = (alt.Chart(countries, 
-        title = 'Map visualisation').mark_geoshape().transform_lookup(
-        lookup='id',
-        from_=alt.LookupData(ct, 'id', ['Yes']))
-        .encode(
-        color='Yes:Q',
-        opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-        tooltip=['country:N', 'Yes:Q'])
-        .add_selection(map_click)
-        .project(
-            type= 'mercator',
-        )).properties(
-            width=400, height=300
-        )
-    return map.to_html()
+    fig = go.Figure(
+        data=[go.Choropleth(
+            locationmode='country names',
+            locations=ct['country'],
+            z=ct['Yes'].astype(float),
+            colorscale='Reds',
+        )]
+    )
+    
+    fig.update_layout(
+        title_text="Share map",
+        title_xanchor="center",
+        title_font=dict(size=24),
+        title_x=0.5,
+        geo=dict(scope='europe'),
+        margin=dict(l=60, r=60, t=50, b=50))
 
+    return fig
 
 if __name__ == '__main__':
     app.run_server(debug = True)
