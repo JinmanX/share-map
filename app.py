@@ -214,7 +214,7 @@ def plot_map(age_chosen, gender_chosen, var_chosen):
     & (data['yrbirth'] <= age_chosen[1])
     & (data['gender'].isin(gender_chosen))]
 
-    ct = pd.crosstab(filtered_data.country, filtered_data.use, normalize='index')
+    ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
     ct = ct.reset_index()
     ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
     map = (alt.Chart(countries, 
@@ -227,13 +227,9 @@ def plot_map(age_chosen, gender_chosen, var_chosen):
         tooltip=['country:N', 'Yes:Q'])
         .add_selection(map_click)
         .project(
-            type='equirectangular', #'mercator'
-            # scale= 350,
-            # center= [20,50],
-            # clipExtent= [[0, 0], [400, 300]],   
+            type= 'mercator',
         )).properties(
-            width=500,
-            height=250
+            width=400, height=300
         )
     return map.to_html()
 
