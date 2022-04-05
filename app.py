@@ -109,7 +109,7 @@ CONTENT_STYLE = {
 }
 
 content = html.Div([
-           html.H2('Employee Mental Health Survey in the US'),
+           html.H2('SHARE data visualisation'),
             dbc.Tabs([
                 # Tab 1
                 dbc.Tab([
