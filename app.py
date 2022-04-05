@@ -17,8 +17,9 @@ app.title = 'SHARE data visualisation'
 server = app.server
 
 # Preparing data
-state_map = alt.topo_feature(data.us_10m.url, 'states')
-data = pd.read_csv('https://raw.githubusercontent.com/UBC-MDS/DSCI532-Group16/main/data/processed/processed_survey.csv')
+countries = alt.topo_feature(data.world_110m.url, 'countries')
+data = pd.read_csv('https://raw.githubusercontent.com/JinmanX/share-map/main/data/res.csv',index_col=0)
+country = pd.read_csv('https://raw.githubusercontent.com/JinmanX/share-map/main/data/country.csv')
 
 #States dataframe for filter
 df_states = data[['state_fullname', 'state']].drop_duplicates(subset=['state_fullname','state']).dropna()
@@ -53,7 +54,7 @@ sidebar = html.Div(
                      {"label": "computer skills", "value": "computer_skills"},
                      {"label": "mental fatigue", "value": "mental_fatigue"},
                      {"label": "physical fatigue", "value": "physical_fatigue"},
-                     {"label": "energy", "value": "energy"}]
+                     {"label": "energy", "value": "energy"}],
             value='computer us', 
             multi=False,
             # style={'height': '30px', 'width': '250px'}
@@ -148,8 +149,8 @@ content = html.Div([
                     label = 'Map visualisation'),
 
                 
-                Tab 2
-                dbc.Tab('Other text', label = 'Network Vosualisation')
+                # Tab 2
+                dbc.Tab('Other text', label = 'Network Visualisation')
             ])], 
             id="page-content", 
             style=CONTENT_STYLE)
@@ -160,45 +161,45 @@ app.layout = html.Div([
     content,
 ])
 
-@app.callback(
-    Output('options_barplot', 'srcDoc'),
-    Input('age_slider', 'value'),
-    Input('state_selector','value'),
-    Input('gender_checklist', 'value'),
-    Input('self_emp_checklist', 'value'))
-def plot_options_bar(age_chosen, state_chosen, gender_chosen, self_emp_chosen):
-    chart = alt.Chart(data[(data['Age'] >= age_chosen[0]) 
-    & (data['Age'] <= age_chosen[1]) 
-    & (data['state'] == state_chosen )
-    & (data['Gender'].isin(gender_chosen))
-    & (data['self_employed'].isin(self_emp_chosen))], 
-    title = "Do you know the options for mental healthcare your employer provides?").mark_bar().encode(
-        x = alt.X('count()'),
-        y = alt.Y('care_options', sort = '-x', title = ""))
+# @app.callback(
+#     Output('options_barplot', 'srcDoc'),
+#     Input('age_slider', 'value'),
+#     Input('state_selector','value'),
+#     Input('gender_checklist', 'value'),
+#     Input('self_emp_checklist', 'value'))
+# def plot_options_bar(age_chosen, state_chosen, gender_chosen, self_emp_chosen):
+#     chart = alt.Chart(data[(data['Age'] >= age_chosen[0]) 
+#     & (data['Age'] <= age_chosen[1]) 
+#     & (data['state'] == state_chosen )
+#     & (data['Gender'].isin(gender_chosen))
+#     & (data['self_employed'].isin(self_emp_chosen))], 
+#     title = "Do you know the options for mental healthcare your employer provides?").mark_bar().encode(
+#         x = alt.X('count()'),
+#         y = alt.Y('care_options', sort = '-x', title = ""))
 
-    return chart.to_html()
+#     return chart.to_html()
 
 
-@app.callback(
-    Output('iframe_discuss_w_supervisor', 'srcDoc'),
-    Input('age_slider', 'value'),
-    Input('state_selector','value'),
-    Input('gender_checklist', 'value'),
-    Input('self_emp_checklist', 'value'))
-def plot_discuss_w_supervisor(age_chosen, state_chosen, gender_chosen, self_emp_chosen):
-    filtered_data = data[(data['Age'] >= age_chosen[0]) 
-    & (data['Age'] <= age_chosen[1]) 
-    & (data['state'] == state_chosen )
-    & (data['Gender'].isin(gender_chosen))
-    & (data['self_employed'].isin(self_emp_chosen))]
-    supervisor_boxplot = alt.Chart(filtered_data, 
-        title='Would employee be willing to discuss mental health issues with supervisor?').mark_boxplot().encode(
-            x=alt.X('Age',  scale=alt.Scale(domain=[18, 80])), 
-            y=alt.Y('supervisor',title='')                                
-            )
-    supervisor_means = (alt.Chart(filtered_data)).mark_circle(color='white').encode( x='mean(Age)', y='supervisor')
-    chart = (supervisor_boxplot + supervisor_means)
-    return chart.to_html()
+# @app.callback(
+#     Output('iframe_discuss_w_supervisor', 'srcDoc'),
+#     Input('age_slider', 'value'),
+#     Input('state_selector','value'),
+#     Input('gender_checklist', 'value'),
+#     Input('self_emp_checklist', 'value'))
+# def plot_discuss_w_supervisor(age_chosen, state_chosen, gender_chosen, self_emp_chosen):
+#     filtered_data = data[(data['Age'] >= age_chosen[0]) 
+#     & (data['Age'] <= age_chosen[1]) 
+#     & (data['state'] == state_chosen )
+#     & (data['Gender'].isin(gender_chosen))
+#     & (data['self_employed'].isin(self_emp_chosen))]
+#     supervisor_boxplot = alt.Chart(filtered_data, 
+#         title='Would employee be willing to discuss mental health issues with supervisor?').mark_boxplot().encode(
+#             x=alt.X('Age',  scale=alt.Scale(domain=[18, 80])), 
+#             y=alt.Y('supervisor',title='')                                
+#             )
+#     supervisor_means = (alt.Chart(filtered_data)).mark_circle(color='white').encode( x='mean(Age)', y='supervisor')
+#     chart = (supervisor_boxplot + supervisor_means)
+#     return chart.to_html()
 
 
 map_click = alt.selection_multi()
@@ -208,30 +209,31 @@ map_click = alt.selection_multi()
     Output('map_frame', 'srcDoc'),
     Input('age_slider', 'value'),
     Input('gender_checklist', 'value'),
-    Input('self_emp_checklist', 'value'))
-def plot_map(age_chosen, gender_chosen, self_emp_chosen):
+    Input('Variable Selection', 'value'))
+def plot_map(age_chosen, gender_chosen, var_chosen):
 
-    filtered_data = data[(data['Age'] >= age_chosen[0]) 
-    & (data['Age'] <= age_chosen[1])
-    & (data['Gender'].isin(gender_chosen))
-    & (data['self_employed'].isin(self_emp_chosen))]
+    filtered_data = data[(data['yrbirth'] >= age_chosen[0]) 
+    & (data['yrbirth'] <= age_chosen[1])
+    & (data['Gender'].isin(gender_chosen))]
 
-    frequencydf = filtered_data.groupby('id')['has_condition'].transform('sum')
-    data['Mental_health_count'] = frequencydf
-    
-    map = (alt.Chart(state_map, 
-        title = 'Frequency of mental health condition').mark_geoshape().transform_lookup(
-        lookup='id',
-        from_=alt.LookupData(data, 'id', ['Mental_health_count']))
-        .encode(
+    map = (alt.Chart(countries).mark_geoshape().encode(
         color='Mental_health_count:Q',
         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-        tooltip=['state:N', 'Mental_health_count:Q'])
-        .add_selection(map_click)
-        .project(type='albersUsa')).properties(
-                                width=700,
-                                height=350
-                            )
+        tooltip=['state:N', 'Mental_health_count:Q']
+        ).transform_lookup(
+        lookup='id',
+        from_=alt.LookupData(data, 'id', ['Mental_health_count'])
+        ).add_selection(map_click
+        ).project(
+            type='equirectangular', #'mercator'
+            scale= 350,
+            center= [20,50],
+            clipExtent= [[0, 0], [400, 300]],   
+        ).properties(
+            width=700,
+            height=350,
+            title = 'Map visualisation'
+        )
     return map.to_html()
 
 if __name__ == '__main__':
