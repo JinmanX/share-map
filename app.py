@@ -19,12 +19,9 @@ server = app.server
 # Preparing data
 countries = alt.topo_feature(data.world_110m.url, 'countries')
 data = pd.read_csv('https://raw.githubusercontent.com/JinmanX/share-map/main/data/res.csv',index_col=0)
-country = pd.read_csv('https://raw.githubusercontent.com/JinmanX/share-map/main/data/country.csv')
-
-#States dataframe for filter
-df_states = data[['state_fullname', 'state']].drop_duplicates(subset=['state_fullname','state']).dropna()
-df_states = df_states.sort_values(by='state_fullname')
-
+country_id = {'Austria':40,'Belgium':56,'Czech Republic':203,'Denmark':208,
+              'France':250,'Germany':276,'Greece':300,'Italy':380,'Poland':616,
+              'Spain':724,'Sweden':752,'Switzerland':756}
 
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -49,13 +46,14 @@ sidebar = html.Div(
         html.H4(html.Label(['Variable Selection'])), 
         dcc.Dropdown(
             id = 'variable_selector',
-            options=[{"label": "gdp", "value": "gdp"},
-                     {"label": "computer use", "value": "computer_use"},
-                     {"label": "computer skills", "value": "computer_skills"},
-                     {"label": "mental fatigue", "value": "mental_fatigue"},
-                     {"label": "physical fatigue", "value": "physical_fatigue"},
-                     {"label": "energy", "value": "energy"}],
-            value='computer us', 
+            options=[#{"label": "gdp", "value": "gdp"},
+                     {"label": "computer use", "value": "use"},
+                    #  {"label": "computer skills", "value": "skills"},
+                     {"label": "mental fatigue", "value": "mfatigue"},
+                     {"label": "physical fatigue", "value": "pfatigue"},
+                    #  {"label": "energy", "value": "energy"},
+                    ],
+            value='use', 
             multi=False,
             # style={'height': '30px', 'width': '250px'}
             ),                    
@@ -127,23 +125,23 @@ content = html.Div([
                                 ),style={'textAlign': 'center'}
                     ),
 
-                    dbc.Row([
-                        dbc.Col(
-                            #Options Barplot
-                            html.Iframe(
-                                id = 'options_barplot', 
-                                style = {'border-width' : '0', 'width' : '100%', 'height': '100%'})
-                        ), 
-                    ]),
+                    # dbc.Row([
+                    #     dbc.Col(
+                    #         #Options Barplot
+                    #         html.Iframe(
+                    #             id = 'options_barplot', 
+                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '100%'})
+                    #     ), 
+                    # ]),
 
-                    dbc.Row([
-                        dbc.Col(
-                            #Discuss mental issues with supervisor boxplot
-                            html.Iframe(
-                                id = 'iframe_discuss_w_supervisor', 
-                                style = {'border-width' : '0', 'width' : '100%', 'height': '100%'}),            
-                        )
-                    ]),   
+                    # dbc.Row([
+                    #     dbc.Col(
+                    #         #Discuss mental issues with supervisor boxplot
+                    #         html.Iframe(
+                    #             id = 'iframe_discuss_w_supervisor', 
+                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '100%'}),            
+                    #     )
+                    # ]),   
                       
                     ],
                     label = 'Map visualisation'),
@@ -209,32 +207,36 @@ map_click = alt.selection_multi()
     Output('map_frame', 'srcDoc'),
     Input('age_slider', 'value'),
     Input('gender_checklist', 'value'),
-    Input('Variable Selection', 'value'))
+    Input('variable_selector', 'value'))
 def plot_map(age_chosen, gender_chosen, var_chosen):
 
     filtered_data = data[(data['yrbirth'] >= age_chosen[0]) 
     & (data['yrbirth'] <= age_chosen[1])
-    & (data['Gender'].isin(gender_chosen))]
+    & (data['gender'].isin(gender_chosen))]
 
-    map = (alt.Chart(countries).mark_geoshape().encode(
-        color='Mental_health_count:Q',
-        opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-        tooltip=['state:N', 'Mental_health_count:Q']
-        ).transform_lookup(
+    ct = pd.crosstab(filtered_data.country, filtered_data.use, normalize='index')
+    ct = ct.reset_index()
+    ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
+    map = (alt.Chart(countries, 
+        title = 'Map visualisation').mark_geoshape().transform_lookup(
         lookup='id',
-        from_=alt.LookupData(data, 'id', ['Mental_health_count'])
-        ).add_selection(map_click
-        ).project(
+        from_=alt.LookupData(ct, 'id', ['Yes']))
+        .encode(
+        color='Yes:Q',
+        opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
+        tooltip=['country:N', 'Yes:Q'])
+        .add_selection(map_click)
+        .project(
             type='equirectangular', #'mercator'
-            scale= 350,
-            center= [20,50],
-            clipExtent= [[0, 0], [400, 300]],   
-        ).properties(
-            width=700,
-            height=350,
-            title = 'Map visualisation'
+            # scale= 350,
+            # center= [20,50],
+            # clipExtent= [[0, 0], [400, 300]],   
+        )).properties(
+            width=500,
+            height=250
         )
     return map.to_html()
+
 
 if __name__ == '__main__':
     app.run_server(debug = True)
