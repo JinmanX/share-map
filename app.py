@@ -9,7 +9,7 @@ import altair as alt
 from vega_datasets import data
 
 
-# Initializing dash app
+# Initializing dash apps
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'SHARE data visualisation'
 
@@ -18,7 +18,7 @@ server = app.server
 
 # Preparing data
 countries = alt.topo_feature(data.world_110m.url, 'countries')
-data = pd.read_csv('https://raw.githubusercontent.com/JinmanX/share-map/main/data/res.csv',index_col=0)
+data = pd.read_csv('./data/share_data.csv',index_col=0)
 country_id = {'Austria':40,'Belgium':56,'Czech Republic':203,'Denmark':208,
               'France':250,'Germany':276,'Greece':300,'Italy':380,'Poland':616,
               'Spain':724,'Sweden':752,'Switzerland':756}
@@ -43,30 +43,37 @@ sidebar = html.Div(
 
         html.Br(),
         # Variable selector
-        html.H4(html.Label(['Variable Selection'])), 
+        html.H4(html.Label(['Indicator Selection'])),
         dcc.Dropdown(
             id = 'variable_selector',
             options=[#{"label": "gdp", "value": "gdp"},
-                     {"label": "computer use", "value": "use"},
+                     {"label": "Internet use", "value": "UseWWW"},
                     #  {"label": "computer skills", "value": "skills"},
-                     {"label": "mental fatigue", "value": "mfatigue"},
-                     {"label": "physical fatigue", "value": "pfatigue"},
+                     {"label": "Mental fatigue", "value": "MentalFatigue"},
+                     {"label": "Physical fatigue", "value": "PhysicalFatigue"},
                     #  {"label": "energy", "value": "energy"},
                     ],
-            value='use', 
+            value='UseWWW',
             multi=False,
             # style={'height': '30px', 'width': '250px'}
-            ),                    
-                
+            ),
+        html.P('Display visualisation of respondents answered \'Yes\' if you select:'),
+        html.P('Internet use: During the past 7 days, have you used the Internet?'),
+        html.P('Mental Fatigue: In the last month, have you had too little energy?'),
+        html.P('Physical Fatigue: Are you bothered by frailty, fatigue?'),
+        html.Br(),
+        html.H4('Filters'),
         html.Br(),
         # Age Slider
-        html.H4(html.Label(['Age'])),
-        dcc.RangeSlider(id = 'age_slider', min = 1939, max = 1978, value = [1939,1978], 
-            marks = {1939:'1939', 1948:'1948', 1963:'1963', 1978:'1978'}),
+        html.H5(html.Label(['Age'])),
+        html.P('Please set a range of age'),
+        dcc.RangeSlider(id = 'age_slider', min = 50, max = 101, value = [50,101],
+            marks = {50:'50', 65:'65', 80:'80', 110:'>80'}),
         
         html.Br(),
         # Gender Filter Checklist
-        html.H4(html.Label(['Gender'])),
+        html.H5(html.Label(['Gender'])),
+        html.P('Please select at least one gender'),
         dcc.Checklist(
             id = 'gender_checklist',
             options = [
@@ -75,27 +82,6 @@ sidebar = html.Div(
             value = ['Male', 'Female'],
             labelStyle = dict(display='block')
         ),
-        html.Br(),
-        # Country Radio buttons
-        html.H4(html.Label(['Country'])),
-        dcc.RadioItems(
-            id = 'country_radioitems',
-            options = [
-                {'label' : 'Austria', 'value' : 'Austria'},
-                {'label' : 'Germany', 'value' : 'Germany'},
-                {'label' : 'Sweden', 'value' : 'Sweden'},
-                {'label' : 'Spain', 'value' : 'Spain'},
-                {'label' : 'Italy', 'value' : 'Italy'},
-                {'label' : 'France', 'value' : 'France'},
-                {'label' : 'Denmark', 'value' : 'Denmark'},
-                {'label' : 'Greece', 'value' : 'Greece'},
-                {'label' : 'Switzerland', 'value' : 'Switzerland'},
-                {'label' : 'Belgium', 'value' : 'Belgium'},
-                {'label' : 'Czech Republic', 'value' : 'Czech Republic'},
-                {'label' : 'Poland', 'value' : 'Poland'}],
-            value = 'Denmark',            
-            labelStyle = dict(display='block')
-        )
 
     ],
     style=SIDEBAR_STYLE,
@@ -110,6 +96,9 @@ CONTENT_STYLE = {
 
 content = html.Div([
            html.H2('SHARE data visualisation'),
+            html.Div([
+                html.P('Data Source: Survey of Health, Aging and Retirement in Europe (SHARE), Wave 7 (n=11008), release 7.1.1 (Börsch-Supan, A., 2019), our own calculation.')
+            ]),
             dbc.Tabs([
                 # Tab 1
                 dbc.Tab([
@@ -124,11 +113,10 @@ content = html.Div([
                                 width=True,
                                 ),style={'textAlign': 'center'}
                     ),
-
                     ],
                     label = 'Map visualisation'),
-            ])], 
-            id="page-content", 
+            ])],
+            id="page-content",
             style=CONTENT_STYLE)
 
 
@@ -137,30 +125,36 @@ app.layout = html.Div([
     content,
 ])
 
-map_click = alt.selection_multi(fields=['country'])
+map_click = alt.selection_multi(fields=['Country'])
 @app.callback(
     Output('map_frame', 'srcDoc'),
     Input('age_slider', 'value'),
     Input('gender_checklist', 'value'),
-    Input('variable_selector', 'value'),
-    Input('country_radioitems', 'value'))
-def plot_map(age_chosen, gender_chosen, var_chosen, country_chosen):
+    Input('variable_selector', 'value'))
+def plot_map(age_chosen, gender_chosen, var_chosen):
 
-    filtered_data = data[(data['yrbirth'] >= age_chosen[0])
-    & (data['yrbirth'] <= age_chosen[1])
-    & (data['gender'].isin(gender_chosen))]
-
-    ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
+    filtered_data = data[(data['Age'] >= age_chosen[0])
+    & (data['Age'] <= age_chosen[1])
+    & (data['Gender'].isin(gender_chosen))]
+    ct = pd.crosstab(filtered_data.Country, filtered_data[var_chosen], normalize='index')
     ct = ct.reset_index()
-    ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
+    ct['id'] = ct.apply(lambda x: country_id[x['Country']], axis=1)
+    if var_chosen == 'PhysicalFatigue':
+        ct = ct.rename(columns={'Selected': 'Percentage'})
+    else:
+        ct = ct.rename(columns={'Yes': 'Percentage'})
     map = (alt.Chart(countries,
-        title = 'Map visualisation').mark_geoshape().transform_lookup(
+        title = 'Map visualisation of selected indicator').mark_geoshape().transform_lookup(
         lookup='id',
-        from_=alt.LookupData(ct, 'id', ['Yes','country']))
+        from_=alt.LookupData(ct, 'id', ['Percentage','Country']))
         .encode(
-        color='Yes:Q',
+        color='Percentage:Q',
         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-        tooltip=['country:N', 'Yes:Q'])
+        tooltip=[
+        alt.Tooltip('Country:N', title="Country"),
+        alt.Tooltip('Percentage:Q', title="Percentage", format='.1%')
+        ])
+        # tooltip=['Country:N', 'Percentage:Q'])
         .add_selection(map_click)
         .project(
             type= 'mercator',
@@ -172,12 +166,15 @@ def plot_map(age_chosen, gender_chosen, var_chosen, country_chosen):
         )
 
     chart = alt.Chart(ct,
-                      title='Barchart').mark_bar().encode(
-        x='Yes',
+                      title='Bar chart of selected indicator').mark_bar().encode(
+        x='Percentage',
         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-        tooltip=['country:N', 'Yes:Q'],
-        color='Yes',
-        y=alt.Y('country',sort='x')
+        tooltip=[
+        alt.Tooltip('Country:N', title="Country"),
+        alt.Tooltip('Percentage:Q', title="Percentage", format='.1%')
+        ],
+        color='Percentage',
+        y=alt.Y('Country',sort='x')
         ).add_selection(map_click
         ).properties(width=200, height=150)
     board = chart & map
