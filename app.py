@@ -114,33 +114,33 @@ content = html.Div([
                 # Tab 1
                 dbc.Tab([
 
-                    # dbc.Row(
-                    #         dbc.Col(
-                    #             # Map plot
-                    #             html.Iframe(
-                    #                 id = 'map_frame', 
-                    #                 style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
-                    #             style={'margin-bottom':'50px', 'textAlign':'center'} ,                                    
-                    #             width=True, 
-                    #             ),style={'textAlign': 'center'}
-                    # ),
                     dbc.Row(
                             dbc.Col(
                                 # Map plot
-                                dcc.Graph(
-                                    id = 'map_frame', 
-                                    style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
-                                style={'margin-bottom':'50px', 'textAlign':'center'} ,                                    
-                                width=True, 
+                                html.Iframe(
+                                    id = 'map_frame',
+                                    style = {'border-width' : '0', 'width' : '100%', 'height': '1200px'}),
+                                style={'margin-bottom':'50px', 'textAlign':'center'} ,
+                                width=True,
                                 ),style={'textAlign': 'center'}
                     ),
+                    # dbc.Row(
+                    #         dbc.Col(
+                    #             # Map plot
+                    #             dcc.Graph(
+                    #                 id = 'map_frame',
+                    #                 style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
+                    #             style={'margin-bottom':'50px', 'textAlign':'center'} ,
+                    #             width=True,
+                    #             ),style={'textAlign': 'center'}
+                    # ),
                     # dbc.Row([
                     #     dbc.Col(
                     #         #Options Barplot
                     #         html.Iframe(
-                    #             id = 'options_barplot', 
-                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '100%'})
-                    #     ), 
+                    #             id = 'options_barplot',
+                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '500px'})
+                    #     ),
                     # ]),
 
                     # dbc.Row([
@@ -157,7 +157,7 @@ content = html.Div([
 
                 
                 # Tab 2
-                dbc.Tab('Other text', label = 'Network Visualisation')
+                # dbc.Tab('Other text', label = 'Network Visualisation')
             ])], 
             id="page-content", 
             style=CONTENT_STYLE)
@@ -168,23 +168,53 @@ app.layout = html.Div([
     content,
 ])
 
-# @app.callback(
-#     Output('options_barplot', 'srcDoc'),
-#     Input('age_slider', 'value'),
-#     Input('state_selector','value'),
-#     Input('gender_checklist', 'value'),
-#     Input('self_emp_checklist', 'value'))
-# def plot_options_bar(age_chosen, state_chosen, gender_chosen, self_emp_chosen):
-#     chart = alt.Chart(data[(data['Age'] >= age_chosen[0]) 
-#     & (data['Age'] <= age_chosen[1]) 
-#     & (data['state'] == state_chosen )
-#     & (data['Gender'].isin(gender_chosen))
-#     & (data['self_employed'].isin(self_emp_chosen))], 
-#     title = "Do you know the options for mental healthcare your employer provides?").mark_bar().encode(
-#         x = alt.X('count()'),
-#         y = alt.Y('care_options', sort = '-x', title = ""))
+map_click = alt.selection_multi(fields=['country'])
+@app.callback(
+    Output('map_frame', 'srcDoc'),
+    Input('age_slider', 'value'),
+    Input('gender_checklist', 'value'),
+    Input('variable_selector', 'value'),
+    Input('country_radioitems', 'value'))
+def plot_map(age_chosen, gender_chosen, var_chosen, country_chosen):
 
-#     return chart.to_html()
+    filtered_data = data[(data['yrbirth'] >= age_chosen[0])
+    & (data['yrbirth'] <= age_chosen[1])
+    & (data['gender'].isin(gender_chosen))]
+
+    ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
+    ct = ct.reset_index()
+    ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
+    map = (alt.Chart(countries,
+        title = 'Map visualisation').mark_geoshape().transform_lookup(
+        lookup='id',
+        from_=alt.LookupData(ct, 'id', ['Yes','country']))
+        .encode(
+        color='Yes:Q',
+        opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
+        tooltip=['country:N', 'Yes:Q'])
+        .add_selection(map_click)
+        .project(
+            type= 'mercator',
+            scale=400, translate=[150, 550]
+            # center=[10,50],
+            # clipExtent=[[0,300],[400,700]]
+        )).properties(
+            width=400, height=300
+        )
+
+    chart = alt.Chart(ct,
+                      title='Barchart').mark_bar().encode(
+        x='Yes',
+        opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
+        color='Yes',
+        y=alt.Y('country',sort='x')
+        ).add_selection(map_click
+        ).properties(width=400)
+    board = chart & map
+    return board.to_html()
+
+
+
 
 
 # @app.callback(
@@ -209,70 +239,42 @@ app.layout = html.Div([
 #     return chart.to_html()
 
 
-map_click = alt.selection_multi()
 
 
+
+
+#
 # @app.callback(
-#     Output('map_frame', 'srcDoc'),
+#     Output('map_frame', 'figure'),
 #     Input('age_slider', 'value'),
 #     Input('gender_checklist', 'value'),
 #     Input('variable_selector', 'value'))
 # def plot_map(age_chosen, gender_chosen, var_chosen):
-
-#     filtered_data = data[(data['yrbirth'] >= age_chosen[0]) 
+#
+#     filtered_data = data[(data['yrbirth'] >= age_chosen[0])
 #     & (data['yrbirth'] <= age_chosen[1])
 #     & (data['gender'].isin(gender_chosen))]
-
+#
 #     ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
 #     ct = ct.reset_index()
-#     ct['id'] = ct.apply(lambda x: country_id[x['country']], axis=1)
-#     map = (alt.Chart(countries, 
-#         title = 'Map visualisation').mark_geoshape().transform_lookup(
-#         lookup='id',
-#         from_=alt.LookupData(ct, 'id', ['Yes']))
-#         .encode(
-#         color='Yes:Q',
-#         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
-#         tooltip=['country:N', 'Yes:Q'])
-#         .add_selection(map_click)
-#         .project(
-#             type= 'mercator',
-#         )).properties(
-#             width=400, height=300
-#         )
-#     return map.to_html()
-
-@app.callback(
-    Output('map_frame', 'figure'),
-    Input('age_slider', 'value'),
-    Input('gender_checklist', 'value'),
-    Input('variable_selector', 'value'))
-def plot_map(age_chosen, gender_chosen, var_chosen):
-
-    filtered_data = data[(data['yrbirth'] >= age_chosen[0]) 
-    & (data['yrbirth'] <= age_chosen[1])
-    & (data['gender'].isin(gender_chosen))]
-
-    ct = pd.crosstab(filtered_data.country, filtered_data[var_chosen], normalize='index')
-    ct = ct.reset_index()
-    fig = go.Figure(
-        data=[go.Choropleth(
-            locationmode='country names',
-            locations=ct['country'],
-            z=ct['Yes'].astype(float),
-            colorscale='Reds',
-        )]
-    )
-    
-    fig.update_layout(
-        title_text="Share map",
-        title_xanchor="center",
-        title_font=dict(size=24),
-        title_x=0.5,
-        geo=dict(scope='europe'),
-        margin=dict(l=60, r=60, t=50, b=50))
-
-    return fig
+#     fig = go.Figure(
+#         data=[go.Choropleth(
+#             locationmode='country names',
+#             locations=ct['country'],
+#             z=ct['Yes'].astype(float),
+#             colorscale='Reds',
+#         )]
+#     )
+#
+#     fig.update_layout(
+#         title_text="Share map",
+#         title_xanchor="center",
+#         title_font=dict(size=24),
+#         title_x=0.5,
+#         geo=dict(scope='europe'),
+#         margin=dict(l=0, r=0, t=0, b=0))
+#
+#     return fig
 
 if __name__ == '__main__':
     app.run_server(debug = True)
