@@ -124,40 +124,9 @@ content = html.Div([
                                 width=True,
                                 ),style={'textAlign': 'center'}
                     ),
-                    # dbc.Row(
-                    #         dbc.Col(
-                    #             # Map plot
-                    #             dcc.Graph(
-                    #                 id = 'map_frame',
-                    #                 style = {'border-width' : '0', 'width' : '100%', 'height': '400px'}),
-                    #             style={'margin-bottom':'50px', 'textAlign':'center'} ,
-                    #             width=True,
-                    #             ),style={'textAlign': 'center'}
-                    # ),
-                    # dbc.Row([
-                    #     dbc.Col(
-                    #         #Options Barplot
-                    #         html.Iframe(
-                    #             id = 'options_barplot',
-                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '500px'})
-                    #     ),
-                    # ]),
 
-                    # dbc.Row([
-                    #     dbc.Col(
-                    #         #Discuss mental issues with supervisor boxplot
-                    #         html.Iframe(
-                    #             id = 'iframe_discuss_w_supervisor', 
-                    #             style = {'border-width' : '0', 'width' : '100%', 'height': '100%'}),            
-                    #     )
-                    # ]),   
-                      
                     ],
                     label = 'Map visualisation'),
-
-                
-                # Tab 2
-                # dbc.Tab('Other text', label = 'Network Visualisation')
             ])], 
             id="page-content", 
             style=CONTENT_STYLE)
@@ -206,10 +175,11 @@ def plot_map(age_chosen, gender_chosen, var_chosen, country_chosen):
                       title='Barchart').mark_bar().encode(
         x='Yes',
         opacity=alt.condition(map_click, alt.value(1), alt.value(0.2)),
+        tooltip=['country:N', 'Yes:Q'],
         color='Yes',
         y=alt.Y('country',sort='x')
         ).add_selection(map_click
-        ).properties(width=400)
+        ).properties(width=200, height=150)
     board = chart & map
     return board.to_html()
 
